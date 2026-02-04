@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const Transaction = require("../models/Transaction");
+const Transaction = require("../models/transactions.js");
 
 // DELETE by transaction_id
 router.delete("/delete/:transaction_id", async (req, res) => {
