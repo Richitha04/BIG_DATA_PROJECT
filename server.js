@@ -32,3 +32,7 @@ const deleteRoute = require("./routes/delete");
 app.use("/api/transactions", createRoute);
 app.use("/api/transactions", readRoute);
 app.use("/api/transactions", deleteRoute);
+
+mongoose.connection.once("open", () => {
+  console.log("Connected to DB:", mongoose.connection.name);
+});
