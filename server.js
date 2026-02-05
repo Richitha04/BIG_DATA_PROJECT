@@ -27,11 +27,15 @@ app.listen(PORT, () => {
 const createRoute = require("./routes/create");
 const readRoute = require("./routes/read");
 const deleteRoute = require("./routes/delete");
+const aggregateRoute = require("./routes/aggregate");
+const queryRoute = require("./routes/query");
 
 
 app.use("/api/transactions", createRoute);
 app.use("/api/transactions", readRoute);
 app.use("/api/transactions", deleteRoute);
+app.use("/api/transactions/aggregate", aggregateRoute);
+app.use("/api/transactions/query", queryRoute);
 
 mongoose.connection.once("open", () => {
   console.log("Connected to DB:", mongoose.connection.name);

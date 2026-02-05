@@ -1,17 +1,14 @@
 const express = require("express");
 const router = express.Router();
 
-const Transaction = require("../models/transactions"); // keep path consistent
+const Transaction = require("../models/transactions"); 
 
-// POST /api/transactions/create
 router.post("/create", async (req, res) => {
   try {
-    // ❌ Empty body check
     if (!req.body || Object.keys(req.body).length === 0) {
       return res.status(400).json({ message: "Empty request body" });
     }
 
-    // ✅ BULK INSERT (array)
     if (Array.isArray(req.body)) {
       const transactions = await Transaction.insertMany(req.body, {
         ordered: false
