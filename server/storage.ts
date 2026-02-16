@@ -1,18 +1,14 @@
 
-import { users, transactions, type User, type InsertUser, type Transaction } from "@shared/schema";
-import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { type User, type InsertUser, type Transaction } from "@shared/schema";
+import { getDb } from "./db";
 import session from "express-session";
-import connectPg from "connect-pg-simple";
-import { pool } from "./db";
-
-const PostgresSessionStore = connectPg(session);
+import MongoStore from "connect-mongo";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser & { accountNumber: string, isAdmin?: boolean }): Promise<User>;
-  
+
   // Banking operations
   createTransaction(transaction: {
     userId: number;
@@ -21,13 +17,13 @@ export interface IStorage {
     description?: string;
     relatedUserId?: number;
   }): Promise<Transaction>;
-  
+
   getTransactions(userId: number): Promise<Transaction[]>;
   getAllTransactions(): Promise<(Transaction & { user: User })[]>; // Admin
   getAllUsers(): Promise<User[]>; // Admin
-  
+
   updateUserBalance(userId: number, amount: string): Promise<User>;
-  
+
   sessionStore: session.Store;
 }
 
@@ -35,25 +31,47 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({
-      pool,
-      createTableIfMissing: true,
+    this.sessionStore = new MongoStore({
+      mongoUrl: process.env.DATABASE_URL,
+      touchAfter: 24 * 3600,
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    const db = getDb();
+    const usersCollection = db.collection("users");
+    const user = await usersCollection.findOne({ id });
+    return user as User | null || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
+    const db = getDb();
+    const usersCollection = db.collection("users");
+    const user = await usersCollection.findOne({ username });
+    return user as User | null || undefined;
   }
 
   async createUser(insertUser: InsertUser & { accountNumber: string, isAdmin?: boolean }): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
-    return user;
+    const db = getDb();
+    const usersCollection = db.collection("users");
+
+    // Get next id (simple counter approach)
+    const lastUser = await usersCollection.findOne({}, { sort: { id: -1 } });
+    const nextId = (lastUser?.id || 0) + 1;
+
+    const newUser: User = {
+      id: nextId,
+      username: insertUser.username,
+      password: insertUser.password,
+      fullName: insertUser.fullName,
+      accountNumber: insertUser.accountNumber,
+      balance: "0.00",
+      createdAt: new Date(),
+      isAdmin: insertUser.isAdmin || false,
+    };
+
+    const result = await usersCollection.insertOne(newUser as any);
+    return newUser;
   }
 
   async createTransaction(tx: {
@@ -63,46 +81,90 @@ export class DatabaseStorage implements IStorage {
     description?: string;
     relatedUserId?: number;
   }): Promise<Transaction> {
-    const [transaction] = await db.insert(transactions).values({
-      ...tx,
+    const db = getDb();
+    const transactionsCollection = db.collection("transactions");
+
+    // Get next id
+    const lastTransaction = await transactionsCollection.findOne({}, { sort: { id: -1 } });
+    const nextId = (lastTransaction?.id || 0) + 1;
+
+    const newTransaction: Transaction = {
+      id: nextId,
+      userId: tx.userId,
+      type: tx.type as any,
       amount: tx.amount.toString(),
-    }).returning();
-    return transaction;
+      description: tx.description,
+      relatedUserId: tx.relatedUserId,
+      date: new Date(),
+    };
+
+    await transactionsCollection.insertOne(newTransaction as any);
+    return newTransaction;
   }
 
   async getTransactions(userId: number): Promise<Transaction[]> {
-    return await db.select()
-      .from(transactions)
-      .where(eq(transactions.userId, userId))
-      .orderBy(desc(transactions.date));
+    const db = getDb();
+    const transactionsCollection = db.collection("transactions");
+    const transactions = await transactionsCollection
+      .find({ userId })
+      .sort({ date: -1 })
+      .toArray();
+    return transactions as Transaction[];
   }
 
   async getAllTransactions(): Promise<(Transaction & { user: User })[]> {
-    const result = await db.select({
-      transaction: transactions,
-      user: users
-    })
-    .from(transactions)
-    .innerJoin(users, eq(transactions.userId, users.id))
-    .orderBy(desc(transactions.date));
+    const db = getDb();
+    const transactionsCollection = db.collection("transactions");
+    const usersCollection = db.collection("users");
 
-    return result.map(r => ({ ...r.transaction, user: r.user }));
+    const transactions = await transactionsCollection
+      .find({})
+      .sort({ date: -1 })
+      .toArray();
+
+    // Fetch user data for each transaction
+    const result = await Promise.all(
+      transactions.map(async (tx) => {
+        const user = await usersCollection.findOne({ id: tx.userId });
+        return { ...tx, user: user as User } as Transaction & { user: User };
+      })
+    );
+
+    return result;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users).orderBy(users.id);
+    const db = getDb();
+    const usersCollection = db.collection("users");
+    const users = await usersCollection
+      .find({})
+      .sort({ id: 1 })
+      .toArray();
+    return users as User[];
   }
 
   async updateUserBalance(userId: number, amount: string): Promise<User> {
-    const [updatedUser] = await db.update(users)
-      .set({ 
-        balance: sql`${users.balance} + ${amount}` 
-      })
-      .where(eq(users.id, userId))
-      .returning();
-      
-    if (!updatedUser) throw new Error("User not found");
-    return updatedUser;
+    const db = getDb();
+    const usersCollection = db.collection("users");
+
+    // Get current user to find their current balance
+    const user = await usersCollection.findOne({ id: userId });
+    if (!user) throw new Error("User not found");
+
+    // Calculate new balance (both are strings, so we parse and add)
+    const currentBalance = parseFloat(user.balance || "0");
+    const amountToAdd = parseFloat(amount);
+    const newBalance = (currentBalance + amountToAdd).toFixed(2);
+
+    // Update user balance
+    const result = await usersCollection.findOneAndUpdate(
+      { id: userId },
+      { $set: { balance: newBalance } },
+      { returnDocument: "after" }
+    );
+
+    if (!result || !result.value) throw new Error("User not found");
+    return result.value as User;
   }
 }
 

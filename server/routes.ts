@@ -1,11 +1,26 @@
 
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { transactionSchema, transferSchema } from "@shared/schema";
+import { transactionSchema, transferSchema, type User } from "@shared/schema";
+
+// Augment Express Request type to include user
+declare global {
+  namespace Express {
+    interface User {
+      id: number;
+      username: string;
+      fullName: string;
+      accountNumber: string;
+      balance: string;
+      createdAt: Date;
+      isAdmin: boolean;
+    }
+  }
+}
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   // Set up authentication middleware and routes
@@ -61,10 +76,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const transaction = await storage.createTransaction({
         userId: req.user.id,
         type: 'withdraw',
-        amount: (-amount).toString(), // Store as negative for consistency or handle in UI? 
-        // Ideally withdrawals are negative in balance calc, but positive in transaction record + type='withdraw'
-        // Let's store positive amount in transaction record, logic handles sign based on type.
-        // Actually storage.createTransaction takes string, let's keep it simple.
+        amount: amount.toString(), // Store as positive, type indicates it's a withdrawal
         description: description || 'Cash Withdrawal',
       });
 
@@ -111,7 +123,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const senderTx = await storage.createTransaction({
         userId: sender.id,
         type: 'transfer_out',
-        amount: (-amount).toString(),
+        amount: amount.toString(), // Store as positive, type indicates it's transfer_out
         description: description || `Transfer to ${recipient.fullName}`,
         relatedUserId: recipient.id,
       });
@@ -170,6 +182,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       password: user1Password,
       fullName: "John Doe",
       accountNumber: "ACC1001",
+      isAdmin: false,
     });
 
     // Initial deposit
@@ -188,6 +201,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       password: user2Password,
       fullName: "Jane Smith",
       accountNumber: "ACC1002",
+      isAdmin: false,
     });
     
     await storage.updateUserBalance(user2.id, "1000.00");

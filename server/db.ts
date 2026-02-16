@@ -1,9 +1,5 @@
 
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import * as schema from "@shared/schema";
-
-const { Pool } = pg;
+import { MongoClient, Db } from "mongodb";
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -11,5 +7,42 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
+let mongoClient: MongoClient;
+let db: Db;
+
+export async function initializeDb() {
+  mongoClient = new MongoClient(process.env.DATABASE_URL!);
+  await mongoClient.connect();
+  db = mongoClient.db();
+
+  // Ensure indexes for collections
+  try {
+    const usersCollection = db.collection("users");
+    await usersCollection.createIndex({ username: 1 }, { unique: true });
+    await usersCollection.createIndex({ account_number: 1 }, { unique: true });
+
+    const transactionsCollection = db.collection("transactions");
+    await transactionsCollection.createIndex({ user_id: 1 });
+    await transactionsCollection.createIndex({ related_user_id: 1 });
+  } catch (error) {
+    // Indexes might already exist, that's fine
+    if ((error as any).code !== 48) {
+      console.warn("Index creation warning:", error);
+    }
+  }
+
+  return db;
+}
+
+export function getDb() {
+  if (!db) {
+    throw new Error("Database not initialized. Call initializeDb() first.");
+  }
+  return db;
+}
+
+export async function closeDb() {
+  if (mongoClient) {
+    await mongoClient.close();
+  }
+}

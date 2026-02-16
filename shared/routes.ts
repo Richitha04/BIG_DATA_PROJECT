@@ -1,6 +1,6 @@
 
 import { z } from 'zod';
-import { insertUserSchema, users, transactions } from './schema';
+import { User, Transaction } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -17,6 +17,28 @@ export const errorSchemas = {
   }),
 };
 
+// Type schemas for responses
+const userSchema = z.object({
+  id: z.number(),
+  username: z.string(),
+  password: z.string(),
+  fullName: z.string(),
+  accountNumber: z.string(),
+  balance: z.string(),
+  createdAt: z.date(),
+  isAdmin: z.boolean(),
+});
+
+const transactionSchema = z.object({
+  id: z.number(),
+  userId: z.number(),
+  type: z.enum(['deposit', 'withdraw', 'transfer_in', 'transfer_out']),
+  amount: z.string(),
+  description: z.string().optional(),
+  relatedUserId: z.number().optional(),
+  date: z.date(),
+});
+
 export const api = {
   auth: {
     register: {
@@ -28,7 +50,7 @@ export const api = {
         fullName: z.string().min(2),
       }),
       responses: {
-        201: z.custom<typeof users.$inferSelect>(),
+        201: userSchema,
         400: errorSchemas.validation,
       },
     },
@@ -40,7 +62,7 @@ export const api = {
         password: z.string(),
       }),
       responses: {
-        200: z.custom<typeof users.$inferSelect>(),
+        200: userSchema,
         401: errorSchemas.unauthorized,
       },
     },
@@ -55,7 +77,7 @@ export const api = {
       method: 'GET' as const,
       path: '/api/user' as const,
       responses: {
-        200: z.custom<typeof users.$inferSelect>(),
+        200: userSchema,
         401: errorSchemas.unauthorized,
       },
     },
@@ -69,7 +91,7 @@ export const api = {
         description: z.string().optional(),
       }),
       responses: {
-        200: z.custom<typeof transactions.$inferSelect>(),
+        200: transactionSchema,
         400: errorSchemas.badRequest,
       },
     },
@@ -81,7 +103,7 @@ export const api = {
         description: z.string().optional(),
       }),
       responses: {
-        200: z.custom<typeof transactions.$inferSelect>(),
+        200: transactionSchema,
         400: errorSchemas.badRequest,
       },
     },
@@ -94,7 +116,7 @@ export const api = {
         description: z.string().optional(),
       }),
       responses: {
-        200: z.custom<typeof transactions.$inferSelect>(),
+        200: transactionSchema,
         400: errorSchemas.badRequest,
       },
     },
@@ -102,7 +124,7 @@ export const api = {
       method: 'GET' as const,
       path: '/api/transactions' as const,
       responses: {
-        200: z.array(z.custom<typeof transactions.$inferSelect>()),
+        200: z.array(transactionSchema),
       },
     },
   },
@@ -111,7 +133,7 @@ export const api = {
       method: 'GET' as const,
       path: '/api/admin/users' as const,
       responses: {
-        200: z.array(z.custom<typeof users.$inferSelect>()),
+        200: z.array(userSchema),
         403: errorSchemas.unauthorized,
       },
     },
@@ -119,7 +141,7 @@ export const api = {
       method: 'GET' as const,
       path: '/api/admin/transactions' as const,
       responses: {
-        200: z.array(z.custom<typeof transactions.$inferSelect & { user: typeof users.$inferSelect }>()),
+        200: z.array(transactionSchema.extend({ user: userSchema })),
         403: errorSchemas.unauthorized,
       },
     },

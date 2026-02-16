@@ -1,65 +1,57 @@
 
-import { pgTable, text, serial, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { relations } from "drizzle-orm";
+import { ObjectId } from "mongodb";
 
-// Users table with banking details
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  fullName: text("full_name").notNull(),
-  accountNumber: text("account_number").notNull().unique(), // Generate this
-  balance: numeric("balance", { precision: 12, scale: 2 }).default("0.00").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  isAdmin: boolean("is_admin").default(false),
+// MongoDB Types
+export interface User {
+  _id?: ObjectId;
+  id: number;
+  username: string;
+  password: string;
+  fullName: string;
+  accountNumber: string;
+  balance: string; // Stored as string to maintain precision
+  createdAt: Date;
+  isAdmin: boolean;
+}
+
+export interface Transaction {
+  _id?: ObjectId;
+  id: number;
+  userId: number;
+  type: "deposit" | "withdraw" | "transfer_in" | "transfer_out";
+  amount: string; // Stored as string to maintain precision
+  description?: string;
+  relatedUserId?: number;
+  date: Date;
+}
+
+// Insert schemas (for creating new documents)
+export const insertUserSchema = z.object({
+  username: z.string().min(3),
+  password: z.string().min(6),
+  fullName: z.string().min(2),
+  accountNumber: z.string(),
+  isAdmin: z.boolean().optional().default(false),
 });
 
-// Transactions table
-export const transactions = pgTable("transactions", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(), // The user who performed or received the transaction
-  type: text("type").notNull(), // 'deposit', 'withdraw', 'transfer_in', 'transfer_out'
-  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-  description: text("description"),
-  relatedUserId: integer("related_user_id"), // For transfers, the other party
-  date: timestamp("date").defaultNow(),
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export const insertTransactionSchema = z.object({
+  userId: z.number(),
+  type: z.enum(["deposit", "withdraw", "transfer_in", "transfer_out"]),
+  amount: z.string(),
+  description: z.string().optional(),
+  relatedUserId: z.number().optional(),
 });
 
-// Relations
-export const usersRelations = relations(users, ({ many }) => ({
-  transactions: many(transactions),
-}));
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 
-export const transactionsRelations = relations(transactions, ({ one }) => ({
-  user: one(users, {
-    fields: [transactions.userId],
-    references: [users.id],
-  }),
-}));
-
-// Schemas
-export const insertUserSchema = createInsertSchema(users).omit({ 
-  id: true, 
-  createdAt: true, 
-  balance: true,
-  accountNumber: true 
-});
-
-export const insertTransactionSchema = createInsertSchema(transactions).omit({ 
-  id: true, 
-  date: true 
-});
-
-// API Types
-export type User = typeof users.$inferSelect;
-export type Transaction = typeof transactions.$inferSelect;
-
+// API Validation Schemas
 export const authSchema = z.object({
   username: z.string().min(3),
   password: z.string().min(6),
-  fullName: z.string().min(2).optional(), // Optional for login
+  fullName: z.string().min(2).optional(),
 });
 
 export const transactionSchema = z.object({
