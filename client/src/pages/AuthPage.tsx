@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/use-auth";
@@ -27,10 +27,11 @@ export default function AuthPage() {
   const [, setLocation] = useLocation();
 
   // Redirect if already logged in
-  if (user) {
-    setLocation("/");
-    return null;
-  }
+  useEffect(() => {
+    if (user) setLocation("/");
+  }, [user, setLocation]);
+
+  if (user) return null;
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-slate-50">

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Layout } from "@/components/Layout";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
 
 // Pages
 import AuthPage from "@/pages/AuthPage";
@@ -20,6 +21,17 @@ function ProtectedRoute({ component: Component, adminOnly = false }: { component
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation("/auth");
+      return;
+    }
+
+    if (!isLoading && user && adminOnly && !user.isAdmin) {
+      setLocation("/");
+    }
+  }, [isLoading, user, adminOnly, setLocation]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -29,12 +41,10 @@ function ProtectedRoute({ component: Component, adminOnly = false }: { component
   }
 
   if (!user) {
-    setLocation("/auth");
     return null;
   }
 
   if (adminOnly && !user.isAdmin) {
-    setLocation("/");
     return null;
   }
 

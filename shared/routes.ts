@@ -25,7 +25,7 @@ const userSchema = z.object({
   fullName: z.string(),
   accountNumber: z.string(),
   balance: z.string(),
-  createdAt: z.date(),
+  createdAt: z.coerce.date(),
   isAdmin: z.boolean(),
 });
 
@@ -36,7 +36,7 @@ const transactionSchema = z.object({
   amount: z.string(),
   description: z.string().optional(),
   relatedUserId: z.number().optional(),
-  date: z.date(),
+  date: z.coerce.date(),
 });
 
 export const api = {

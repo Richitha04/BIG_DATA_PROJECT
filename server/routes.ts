@@ -2,10 +2,12 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth, hashPassword } from "./auth";
-import { storage } from "./storage";
-import { api } from "@shared/routes";
 import { z } from "zod";
 import { transactionSchema, transferSchema, type User } from "@shared/schema";
+import { api } from "@shared/routes";
+
+// Use in-memory storage for preview
+import { storage } from "./storage-memory";
 
 // Augment Express Request type to include user
 declare global {

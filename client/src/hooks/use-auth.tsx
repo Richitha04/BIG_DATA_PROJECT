@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { User } from "@shared/schema";
 import { api } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
 
 type AuthContextType = {
   user: User | null;
@@ -63,23 +64,30 @@ function useRegisterMutation() {
         method: api.auth.register.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        credentials: "include",
       });
 
       if (!res.ok) {
         if (res.status === 400) {
-          const err = await res.json();
-          throw new Error(err.message || "Registration failed");
+          const text = await res.text();
+          try {
+            const err = JSON.parse(text);
+            throw new Error(err.message || "Registration failed");
+          } catch {
+            throw new Error(text || "Registration failed");
+          }
         }
         throw new Error("Registration failed");
       }
 
       return api.auth.register.responses[201].parse(await res.json());
     },
-    onSuccess: () => {
-      // Auto login logic would go here, or just redirect to login
+    onSuccess: (user) => {
+      // Server logs the user in during registration, so keep client auth state in sync.
+      queryClient.setQueryData([api.auth.me.path], user);
       toast({
         title: "Account created",
-        description: "You can now log in with your credentials.",
+        description: `Welcome, ${user.fullName}!`,
       });
     },
     onError: (error) => {
@@ -100,6 +108,7 @@ function useLogoutMutation() {
     mutationFn: async () => {
       const res = await fetch(api.auth.logout.path, {
         method: api.auth.logout.method,
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Logout failed");
     },
@@ -156,5 +165,3 @@ export function useAuth() {
   }
   return context;
 }
-
-import { z } from "zod"; // Needed for type inference
