@@ -73,24 +73,30 @@ export function setupAuth(app: Express) {
     try {
       const existingUser = await storage.getUserByUsername(req.body.username);
       if (existingUser) {
-        return res.status(400).send("Username already exists");
+        return res.status(400).json({ message: "Username already exists" });
       }
 
-      // Generate random account number
+      // Generate random account number (ensure uniqueness)
       const accountNumber = "ACC" + Math.floor(100000 + Math.random() * 900000);
 
       const hashedPassword = await hashPassword(req.body.password);
       const user = await storage.createUser({
-        ...req.body,
+        username: req.body.username,
         password: hashedPassword,
+        fullName: req.body.fullName,
         accountNumber,
+        isAdmin: false,
       });
 
       req.login(user, (err) => {
         if (err) return next(err);
         res.status(201).json(user);
       });
-    } catch (err) {
+    } catch (err: any) {
+      // MongoDB duplicate key (e.g. username or accountNumber collision)
+      if (err?.code === 11000) {
+        return res.status(400).json({ message: "Username or account already exists. Please try again." });
+      }
       next(err);
     }
   });

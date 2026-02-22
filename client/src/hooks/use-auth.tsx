@@ -68,16 +68,17 @@ function useRegisterMutation() {
       });
 
       if (!res.ok) {
+        let message = "Registration failed";
         if (res.status === 400) {
           const text = await res.text();
           try {
             const err = JSON.parse(text);
-            throw new Error(err.message || "Registration failed");
+            message = err.message || message;
           } catch {
-            throw new Error(text || "Registration failed");
+            message = text || message;
           }
         }
-        throw new Error("Registration failed");
+        throw new Error(message);
       }
 
       return api.auth.register.responses[201].parse(await res.json());
