@@ -32,7 +32,7 @@ const userSchema = z.object({
 const transactionSchema = z.object({
   id: z.number(),
   userId: z.number(),
-  type: z.enum(['deposit', 'withdraw', 'transfer_in', 'transfer_out']),
+  type: z.enum(['deposit', 'withdraw', 'transfer']),
   amount: z.string(),
   description: z.string().optional(),
   from_user: z.string().nullable().optional(),

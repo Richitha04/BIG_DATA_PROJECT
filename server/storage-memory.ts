@@ -67,27 +67,73 @@ export class InMemoryStorage implements IStorage {
     this.users.set(user.id, user);
     return user;
   }
+async createTransaction(tx: {
 
-  async createTransaction(tx: {
-    userId: number;
-    type: string;
-    amount: string;
-    description?: string;
-    relatedUserId?: number;
-  }): Promise<Transaction> {
-    const transaction: Transaction = {
-      id: this.nextTransactionId++,
-      userId: tx.userId,
-      type: tx.type as any,
-      amount: tx.amount.toString(),
-      description: tx.description,
-      relatedUserId: tx.relatedUserId,
-      date: new Date(),
-    };
+  userId: number;
+  type: string;
+  amount: string;
+  description?: string;
+  relatedUserId?: number;
 
-    this.transactions.set(transaction.id, transaction);
-    return transaction;
+}): Promise<Transaction> {
+
+  const user = await this.getUser(tx.userId);
+
+  if (!user) throw new Error("User not found");
+
+  // Default sender = logged in user
+  let fromUser: string | null = user.fullName;
+
+  let toUser: string | null = null;
+
+
+  // Transfer case → find receiver
+
+  if (tx.relatedUserId && tx.type === "transfer") {
+
+    const relatedUser =
+      await this.getUser(tx.relatedUserId);
+
+    toUser =
+      relatedUser?.fullName ?? null;
+
   }
+
+
+  const transaction: any = {
+
+    id: this.nextTransactionId++,
+
+    userId: tx.userId,
+
+    type: tx.type as any,
+
+    from_user: fromUser,
+
+    to_user: toUser,
+
+    amount: tx.amount.toString(),
+
+    description: tx.description,
+
+    relatedUserId: tx.relatedUserId,
+
+    date: new Date(),
+
+  };
+
+
+  this.transactions.set(
+
+    transaction.id,
+
+    transaction
+
+  );
+
+  return transaction;
+
+}
 
   async getTransactions(userId: number): Promise<Transaction[]> {
     const userTransactions = Array.from(this.transactions.values())

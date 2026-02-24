@@ -83,53 +83,101 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTransaction(tx: {
-    userId: number;
-    type: string;
-    amount: string;
-    description?: string;
-    relatedUserId?: number;
-  }): Promise<Transaction> {
-    const db = getDb();
-    const transactionsCollection = db.collection("transactions");
 
-    // Get next id
-    const lastTransaction = await transactionsCollection.findOne({}, { sort: { id: -1 } });
-    const nextId = (lastTransaction?.id || 0) + 1;
+  userId: number;
+  type: string;
+  amount: string;
+  description?: string;
+  relatedUserId?: number;
 
-    // Get user info for from_user and to_user
-    const user = await this.getUser(tx.userId);
-    let fromUser = user?.fullName;
-    let toUser = null;
+}): Promise<Transaction> {
 
-    if (tx.relatedUserId && (tx.type === 'transfer_out' || tx.type === 'transfer_in')) {
-      const relatedUser = await this.getUser(tx.relatedUserId);
-      if (tx.type === 'transfer_out') {
-        toUser = relatedUser?.fullName;
-      } else {
-        fromUser = relatedUser?.fullName;
-        toUser = user?.fullName;
-      }
-    }
+  const db = getDb();
 
-    const newTransaction: Transaction = {
-      id: nextId,
-      userId: tx.userId,
-      type: tx.type as any,
-      amount: tx.amount.toString(),
-      description: tx.description,
-      relatedUserId: tx.relatedUserId,
-      date: new Date(),
-    };
+  const transactionsCollection =
+    db.collection("transactions");
 
-    // Include transaction_id for DB unique index (avoids E11000 when field was null for all docs)
-    await transactionsCollection.insertOne({
-      ...newTransaction,
-      transaction_id: nextId,
-      from_user: fromUser,
-      to_user: toUser,
-    } as any);
-    return newTransaction;
+
+  const lastTransaction =
+    await transactionsCollection.findOne(
+      {},
+      { sort: { id: -1 } }
+    );
+
+  const nextId =
+    (lastTransaction?.id || 0) + 1;
+
+
+  const user =
+    await this.getUser(tx.userId);
+
+  if (!user)
+    throw new Error("User not found");
+
+
+  let fromUser =
+    user.fullName;
+
+  let toUser: string | null =
+    null;
+
+
+  // SINGLE transfer record logic
+
+  if (
+    tx.relatedUserId &&
+    tx.type === "transfer"
+  ) {
+
+    const relatedUser =
+      await this.getUser(
+        tx.relatedUserId
+      );
+
+    toUser =
+      relatedUser?.fullName ?? null;
+
   }
+
+
+  const newTransaction: Transaction = {
+
+    id: nextId,
+
+    userId: tx.userId,
+
+    type: tx.type as any,
+
+    from_user: fromUser,
+
+    to_user: toUser,
+
+    amount:
+      tx.amount.toString(),
+
+    description:
+      tx.description,
+
+    relatedUserId:
+      tx.relatedUserId,
+
+    date: new Date(),
+
+  };
+
+
+  await transactionsCollection.insertOne({
+
+    ...newTransaction,
+
+    transaction_id: nextId
+
+  } as any);
+
+
+  return newTransaction;
+
+}
 
   async getTransactions(userId: number): Promise<Transaction[]> {
     const db = getDb();
