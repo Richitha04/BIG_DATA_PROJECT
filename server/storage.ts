@@ -52,7 +52,7 @@ export class DatabaseStorage implements IStorage {
     return user as User | null || undefined;
   }
 
-    async getUserByAccountNumber(accountNumber : string): Promise<User | undefined> {
+  async getUserByAccountNumber(accountNumber: string): Promise<User | undefined> {
     const db = getDb();
     const usersCollection = db.collection("users");
     const user = await usersCollection.findOne({ accountNumber });
@@ -96,6 +96,21 @@ export class DatabaseStorage implements IStorage {
     const lastTransaction = await transactionsCollection.findOne({}, { sort: { id: -1 } });
     const nextId = (lastTransaction?.id || 0) + 1;
 
+    // Get user info for from_user and to_user
+    const user = await this.getUser(tx.userId);
+    let fromUser = user?.fullName;
+    let toUser = null;
+
+    if (tx.relatedUserId && (tx.type === 'transfer_out' || tx.type === 'transfer_in')) {
+      const relatedUser = await this.getUser(tx.relatedUserId);
+      if (tx.type === 'transfer_out') {
+        toUser = relatedUser?.fullName;
+      } else {
+        fromUser = relatedUser?.fullName;
+        toUser = user?.fullName;
+      }
+    }
+
     const newTransaction: Transaction = {
       id: nextId,
       userId: tx.userId,
@@ -110,6 +125,8 @@ export class DatabaseStorage implements IStorage {
     await transactionsCollection.insertOne({
       ...newTransaction,
       transaction_id: nextId,
+      from_user: fromUser,
+      to_user: toUser,
     } as any);
     return newTransaction;
   }
@@ -128,8 +145,8 @@ export class DatabaseStorage implements IStorage {
       id: doc.id,
       userId: doc.userId,
       type: doc.type,
-      from_user:doc.from_user,
-      to_user:doc.to_user,
+      from_user: doc.from_user,
+      to_user: doc.to_user,
       amount: String(doc.amount ?? "0"),
       description: doc.description,
       relatedUserId: doc.relatedUserId,

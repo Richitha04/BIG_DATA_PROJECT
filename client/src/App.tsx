@@ -15,6 +15,7 @@ import Withdraw from "@/pages/Withdraw";
 import Transfer from "@/pages/Transfer";
 import History from "@/pages/History";
 import Admin from "@/pages/Admin";
+import Query from "@/pages/Query";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ component: Component, adminOnly = false }: { component: any, adminOnly?: boolean }) {
@@ -59,27 +60,31 @@ function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
-      
+
       <Route path="/">
         {() => <ProtectedRoute component={Dashboard} />}
       </Route>
-      
+
       <Route path="/deposit">
         {() => <ProtectedRoute component={Deposit} />}
       </Route>
-      
+
       <Route path="/withdraw">
         {() => <ProtectedRoute component={Withdraw} />}
       </Route>
-      
+
       <Route path="/transfer">
         {() => <ProtectedRoute component={Transfer} />}
       </Route>
-      
+
       <Route path="/history">
         {() => <ProtectedRoute component={History} />}
       </Route>
-      
+
+      <Route path="/query">
+        {() => <ProtectedRoute component={Query} />}
+      </Route>
+
       <Route path="/admin">
         {() => <ProtectedRoute component={Admin} adminOnly />}
       </Route>

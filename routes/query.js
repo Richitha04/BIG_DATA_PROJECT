@@ -60,4 +60,63 @@ router.get("/limit", async (req, res) => {
   }
 });
 
+
+// 5️⃣ CUSTOM QUERY
+// URL: /api/transactions/query/custom
+// POST: Execute custom MongoDB queries
+router.post("/custom", async (req, res) => {
+  try {
+    const { query, sort, limit, skip } = req.body;
+
+    if (!query) {
+      return res.status(400).json({ error: "Query is required" });
+    }
+
+    let parsedQuery;
+    try {
+      parsedQuery = typeof query === 'string' ? JSON.parse(query) : query;
+    } catch (err) {
+      return res.status(400).json({ error: "Invalid JSON in query" });
+    }
+
+    let mongoQuery = Transaction.find(parsedQuery);
+
+    // Apply sort if provided
+    if (sort) {
+      try {
+        const parsedSort = typeof sort === 'string' ? JSON.parse(sort) : sort;
+        mongoQuery = mongoQuery.sort(parsedSort);
+      } catch (err) {
+        return res.status(400).json({ error: "Invalid JSON in sort parameter" });
+      }
+    }
+
+    // Apply limit if provided
+    if (limit) {
+      mongoQuery = mongoQuery.limit(parseInt(limit));
+    }
+
+    // Apply skip if provided
+    if (skip) {
+      mongoQuery = mongoQuery.skip(parseInt(skip));
+    }
+
+    const data = await mongoQuery.exec();
+
+    res.json({
+      success: true,
+      data: data,
+      count: data.length,
+      query: parsedQuery
+    });
+
+  } catch (err) {
+    console.error("Query execution error:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message || "Failed to execute query"
+    });
+  }
+});
+
 module.exports = router;

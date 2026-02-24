@@ -3,7 +3,7 @@ import { useTransactions } from "@/hooks/use-banking";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ArrowDownLeft, ArrowUpRight, Send, Wallet, TrendingUp } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Send, Wallet, TrendingUp, Search, Filter } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
@@ -34,6 +34,11 @@ export default function Dashboard() {
               <Send className="w-4 h-4" /> Transfer
             </Button>
           </Link>
+          <Link href="/query">
+            <Button variant="outline" className="gap-2">
+              <Search className="w-4 h-4" /> Query
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -45,7 +50,7 @@ export default function Dashboard() {
               <path d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" />
             </svg>
           </div>
-          
+
           <div className="relative z-10 flex flex-col justify-between h-full min-h-[200px]">
             <div className="flex justify-between items-start">
               <div>
@@ -84,7 +89,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
           <Card className="border-none shadow-soft hover:shadow-lg transition-shadow duration-300">
-             <CardContent className="p-6 flex items-center gap-4">
+            <CardContent className="p-6 flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
                 <Wallet className="w-6 h-6" />
               </div>
@@ -137,17 +142,16 @@ export default function Dashboard() {
                   transactions?.slice(0, 5).map((tx: any) => (
                     <tr key={tx.id} className="group hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 font-medium capitalize flex items-center gap-3">
-                         <TransactionIcon type={tx.type} />
-                         {tx.type.replace('_', ' ')}
+                        <TransactionIcon type={tx.type} />
+                        {tx.type.replace('_', ' ')}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">{tx.description || "No description"}</td>
                       <td className="px-6 py-4 text-muted-foreground">{format(new Date(tx.date), "MMM d, yyyy")}</td>
-                      <td className={`px-6 py-4 text-right font-medium ${
-                        ['deposit', 'transfer_in'].includes(tx.type) ? 'text-green-600' : 'text-slate-900'
-                      }`}>
+                      <td className={`px-6 py-4 text-right font-medium ${['deposit', 'transfer_in'].includes(tx.type) ? 'text-green-600' : 'text-slate-900'
+                        }`}>
                         {['deposit', 'transfer_in'].includes(tx.type) ? '+' : '-'}{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(tx.amount))}
                       </td>
-                       <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           Completed
                         </span>
@@ -160,6 +164,7 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
+
     </div>
   );
 }
