@@ -14,7 +14,7 @@ export interface IStorage {
   createTransaction(transaction: {
     userId: number;
     type: string;
-    amount: string;
+    amount: number;
     description?: string;
     relatedUserId?: number;
   }): Promise<Transaction>;
@@ -23,7 +23,7 @@ export interface IStorage {
   getAllTransactions(): Promise<(Transaction & { user: User })[]>; // Admin
   getAllUsers(): Promise<User[]>; // Admin
 
-  updateUserBalance(userId: number, amount: string): Promise<User>;
+  updateUserBalance(userId: number, amount: number): Promise<User>;
 
   sessionStore: session.Store;
 }
@@ -86,7 +86,7 @@ export class DatabaseStorage implements IStorage {
 
   userId: number;
   type: string;
-  amount: string;
+  amount: Number;
   description?: string;
   relatedUserId?: number;
 
@@ -153,7 +153,7 @@ export class DatabaseStorage implements IStorage {
     to_user: toUser,
 
     amount:
-      tx.amount.toString(),
+      Number(tx.amount),
 
     description:
       tx.description,
@@ -195,7 +195,7 @@ export class DatabaseStorage implements IStorage {
       type: doc.type,
       from_user: doc.from_user,
       to_user: doc.to_user,
-      amount: String(doc.amount ?? "0"),
+      amount: Number(doc.amount ?? "0"),
       description: doc.description,
       relatedUserId: doc.relatedUserId,
       date: doc.date instanceof Date ? doc.date.toISOString() : doc.date,
@@ -233,7 +233,7 @@ export class DatabaseStorage implements IStorage {
     return users as User[];
   }
 
-  async updateUserBalance(userId: number, amount: string): Promise<User> {
+  async updateUserBalance(userId: number, amount: number): Promise<User> {
     const db = getDb();
     const usersCollection = db.collection("users");
 
@@ -242,8 +242,8 @@ export class DatabaseStorage implements IStorage {
     if (!user) throw new Error("User not found");
 
     // Calculate new balance (both are strings, so we parse and add)
-    const currentBalance = parseFloat(user.balance || "0");
-    const amountToAdd = parseFloat(amount);
+    const currentBalance = Number(user.balance ?? 0);
+    const amountToAdd = Number(amount);
     const newBalance = (currentBalance + amountToAdd).toFixed(2);
 
     // Update user balance

@@ -12,7 +12,7 @@ export interface IStorage {
   createTransaction(transaction: {
     userId: number;
     type: string;
-    amount: string;
+    amount: Number;
     description?: string;
     relatedUserId?: number;
   }): Promise<Transaction>;
@@ -71,7 +71,7 @@ async createTransaction(tx: {
 
   userId: number;
   type: string;
-  amount: string;
+  amount: Number;
   description?: string;
   relatedUserId?: number;
 
@@ -112,7 +112,7 @@ async createTransaction(tx: {
 
     to_user: toUser,
 
-    amount: tx.amount.toString(),
+    amount: Number(tx.amount),
 
     description: tx.description,
 
