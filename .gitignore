@@ -7,3 +7,4 @@ vite.config.ts.*
 tmpclaude-*-cwd
 cookies.txt
 .local/
+.env
