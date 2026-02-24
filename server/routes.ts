@@ -242,16 +242,161 @@ app.post("/api/transactions/query/custom", async (req, res) => {
     const collection =
       db.collection("transactions");
 
-    const { query } = req.body;
+    let { query } = req.body;
 
-    const parsedQuery =
-      JSON.parse(query);
+    if (!query)
+      return res.status(400).json({
+
+        success:false,
+
+        error:"Query required"
+
+      });
+
+    query = query.trim();
+
+    let filter:any = {};
+
+    let limit = 50;
+
+    let sort:any = null;
+
+    let skip = 0;
+
+
+    // =====================
+    // FIND FILTER
+    // =====================
+
+    const findMatch =
+      query.match(/find\s*\(([\s\S]*?)\)/);
+
+    if(findMatch){
+
+      let filterString =
+        findMatch[1].trim();
+
+      filter =
+        filterString
+          ? eval("("+filterString+")")   // allow mongo style object
+          : {};
+
+    }
+
+    else{
+
+      filter =
+        eval("("+query+")");
+
+    }
+
+
+    // =====================
+    // LIMIT
+    // =====================
+
+    const limitMatch =
+      query.match(/limit\s*\((\d+)\)/);
+
+    if(limitMatch)
+      limit =
+        parseInt(limitMatch[1]);
+
+
+    // =====================
+    // SKIP
+    // =====================
+
+    const skipMatch =
+      query.match(/skip\s*\((\d+)\)/);
+
+    if(skipMatch)
+      skip =
+        parseInt(skipMatch[1]);
+
+
+    // =====================
+    // SORT
+    // =====================
+
+    const sortMatch =
+      query.match(/sort\s*\(([\s\S]*?)\)/);
+
+    if(sortMatch){
+
+      sort =
+        eval("("+sortMatch[1]+")");
+
+    }
+
+
+    // =====================
+    // Execute
+    // =====================
+
+    let cursor =
+      collection.find(filter);
+
+    if(sort){
+
+  const sortField =
+    Object.keys(sort)[0];
+
+  const direction =
+    sort[sortField];
+
+  // numeric sort using aggregation
+
+  const results =
+    await collection.aggregate([
+
+      { $match: filter },
+
+      {
+        $addFields:{
+          numericAmount:{
+            $toDouble:"$amount"
+          }
+        }
+      },
+
+      {
+        $sort:{
+          [sortField === "amount"
+            ? "numericAmount"
+            : sortField
+          ]:direction
+        }
+      },
+
+      { $skip: skip },
+
+      { $limit: limit }
+
+    ]).toArray();
+
+  return res.json({
+
+    success:true,
+
+    data:results,
+
+    count:results.length
+
+  });
+
+}
+
+    if(skip)
+      cursor =
+        cursor.skip(skip);
+
+    cursor =
+      cursor.limit(limit);
+
 
     const results =
-      await collection
-        .find(parsedQuery)
-        .limit(50)
-        .toArray();
+      await cursor.toArray();
 
     res.json({
 
@@ -267,20 +412,21 @@ app.post("/api/transactions/query/custom", async (req, res) => {
 
   catch(error){
 
+    console.error(error);
+
     res.status(400).json({
 
       success:false,
 
       error:
-       error instanceof Error
-        ? error.message
-        :"Invalid Query"
+        error instanceof Error
+          ? error.message
+          :"Cannot execute query"
 
     });
 
   }
 
 });
-
   return httpServer;
 }
