@@ -7,6 +7,7 @@ import MongoStore from "connect-mongo";
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByAccountNumber(accountNumber: string): Promise<User | undefined>;
   createUser(user: InsertUser & { accountNumber: string, isAdmin?: boolean }): Promise<User>;
 
   // Banking operations
@@ -48,6 +49,13 @@ export class DatabaseStorage implements IStorage {
     const db = getDb();
     const usersCollection = db.collection("users");
     const user = await usersCollection.findOne({ username });
+    return user as User | null || undefined;
+  }
+
+    async getUserByAccountNumber(accountNumber : string): Promise<User | undefined> {
+    const db = getDb();
+    const usersCollection = db.collection("users");
+    const user = await usersCollection.findOne({ accountNumber });
     return user as User | null || undefined;
   }
 
@@ -120,6 +128,8 @@ export class DatabaseStorage implements IStorage {
       id: doc.id,
       userId: doc.userId,
       type: doc.type,
+      from_user:doc.from_user,
+      to_user:doc.to_user,
       amount: String(doc.amount ?? "0"),
       description: doc.description,
       relatedUserId: doc.relatedUserId,
