@@ -110,8 +110,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // Find recipient (simulate finding by account number)
       // We need a method to find by account number, using getAllUsers for now or add method
       // Ideally storage should have getUserByAccountNumber
-      const allUsers = await storage.getAllUsers();
-      const recipient = allUsers.find(u => u.accountNumber === toAccountNumber);
+      const recipient = await storage.getUserByAccountNumber(toAccountNumber);    
 
       if (!recipient) {
         return res.status(400).json({ message: "Recipient account not found" });
