@@ -126,25 +126,27 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // Add to recipient
       await storage.updateUserBalance(recipient.id, amount.toString());
 
-      // Record sender transaction
-      const senderTx = await storage.createTransaction({
-        userId: sender.id,
-        type: 'transfer_out',
-        amount: amount.toString(), // Store as positive, type indicates it's transfer_out
-        description: description || `Transfer to ${recipient.fullName}`,
-        relatedUserId: recipient.id,
-      });
+      // Record ONE transaction only
 
-      // Record recipient transaction
-      await storage.createTransaction({
-        userId: recipient.id,
-        type: 'transfer_in',
-        amount: amount.toString(),
-        description: description || `Transfer from ${sender.fullName}`,
-        relatedUserId: sender.id,
-      });
+    const senderTx =
+    await storage.createTransaction({
 
-      res.json(senderTx);
+      userId: sender.id,
+
+      type:'transfer',
+
+      amount: amount.toString(),
+
+      description:
+      description ||
+      `Transfer to ${recipient.fullName}`,
+
+      relatedUserId:
+      recipient.id,
+
+  });
+
+res.json(senderTx);
     } catch (err) {
       if (err instanceof z.ZodError) {
         res.status(400).json({ message: err.errors[0].message });

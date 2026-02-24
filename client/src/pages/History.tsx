@@ -86,9 +86,9 @@ export default function History() {
                     <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
                       {format(new Date(tx.date), "MMM d, yyyy h:mm a")}
                     </td>
-                    <td className={`px-6 py-4 text-right font-medium whitespace-nowrap ${['deposit', 'transfer_in'].includes(tx.type) ? 'text-green-600' : 'text-slate-900'
+                    <td className={`px-6 py-4 text-right font-medium whitespace-nowrap ${['deposit', 'transfer'].includes(tx.type) ? 'text-green-600' : 'text-slate-900'
                       }`}>
-                      {['deposit', 'transfer_in'].includes(tx.type) ? '+' : '-'}{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(tx.amount))}
+                      {['deposit', 'transfer'].includes(tx.type) ? '+' : '-'}{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(tx.amount))}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">

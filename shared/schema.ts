@@ -19,7 +19,9 @@ export interface Transaction {
   _id?: ObjectId;
   id: number;
   userId: number;
-  type: "deposit" | "withdraw" | "transfer_in" | "transfer_out";
+  type: "deposit" | "withdraw" | "transfer";
+  from_user?: string | null;
+  to_user?: string | null;
   amount: string; // Stored as string to maintain precision
   description?: string;
   relatedUserId?: number;
@@ -39,7 +41,7 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export const insertTransactionSchema = z.object({
   userId: z.number(),
-  type: z.enum(["deposit", "withdraw", "transfer_in", "transfer_out"]),
+  type: z.enum(["deposit", "withdraw", "transfer"]),
   amount: z.string(),
   description: z.string().optional(),
   relatedUserId: z.number().optional(),
