@@ -5,6 +5,7 @@ import { setupAuth, hashPassword } from "./auth";
 import { z } from "zod";
 import { transactionSchema, transferSchema, type User } from "@shared/schema";
 import { api } from "@shared/routes";
+import { getDb } from "./db";
 
 import { storage } from "./storage";
 
@@ -228,6 +229,58 @@ res.json(senderTx);
 
     console.log("Database seeded!");
   }
+
+app.post("/api/transactions/query/custom", async (req, res) => {
+
+  if (!req.isAuthenticated())
+    return res.sendStatus(401);
+
+  try {
+
+    const db = getDb();
+
+    const collection =
+      db.collection("transactions");
+
+    const { query } = req.body;
+
+    const parsedQuery =
+      JSON.parse(query);
+
+    const results =
+      await collection
+        .find(parsedQuery)
+        .limit(50)
+        .toArray();
+
+    res.json({
+
+      success:true,
+
+      data:results,
+
+      count:results.length
+
+    });
+
+  }
+
+  catch(error){
+
+    res.status(400).json({
+
+      success:false,
+
+      error:
+       error instanceof Error
+        ? error.message
+        :"Invalid Query"
+
+    });
+
+  }
+
+});
 
   return httpServer;
 }
