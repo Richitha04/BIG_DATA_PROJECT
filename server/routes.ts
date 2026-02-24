@@ -39,13 +39,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { amount, description } = api.banking.deposit.input.parse(req.body);
       
       // Update balance
-      await storage.updateUserBalance(req.user.id, amount.toString());
+      await storage.updateUserBalance(req.user.id, amount);
       
       // Record transaction
       const transaction = await storage.createTransaction({
         userId: req.user.id,
         type: 'deposit',
-        amount: amount.toString(),
+        amount: amount,
         description: description || 'Cash Deposit',
       });
       
@@ -74,13 +74,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       // Update balance (negative amount)
-      await storage.updateUserBalance(req.user.id, (-amount).toString());
+      await storage.updateUserBalance(req.user.id, (-amount));
 
       // Record transaction
       const transaction = await storage.createTransaction({
         userId: req.user.id,
         type: 'withdraw',
-        amount: amount.toString(), // Store as positive, type indicates it's a withdrawal
+        amount: Number(amount), // Store as positive, type indicates it's a withdrawal
         description: description || 'Cash Withdrawal',
       });
 
@@ -122,10 +122,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       // Deduct from sender
-      await storage.updateUserBalance(sender.id, (-amount).toString());
+      await storage.updateUserBalance(sender.id, (-amount));
       
       // Add to recipient
-      await storage.updateUserBalance(recipient.id, amount.toString());
+      await storage.updateUserBalance(recipient.id, amount);
 
       // Record ONE transaction only
 
@@ -136,7 +136,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       type:'transfer',
 
-      amount: amount.toString(),
+      amount: Number(amount),
 
       description:
       description ||
@@ -201,11 +201,11 @@ res.json(senderTx);
     });
 
     // Initial deposit
-    await storage.updateUserBalance(user1.id, "5000.00");
+    await storage.updateUserBalance(user1.id, 5000.00);
     await storage.createTransaction({
       userId: user1.id,
       type: "deposit",
-      amount: "5000.00",
+      amount: 5000.00,
       description: "Initial Deposit",
     });
 
@@ -219,11 +219,11 @@ res.json(senderTx);
       isAdmin: false,
     });
     
-    await storage.updateUserBalance(user2.id, "1000.00");
+    await storage.updateUserBalance(user2.id, 1000.00);
     await storage.createTransaction({
       userId: user2.id,
       type: "deposit",
-      amount: "1000.00",
+      amount: 1000.00,
       description: "Initial Deposit",
     });
 
@@ -239,12 +239,9 @@ app.post("/api/transactions/query/custom", async (req, res) => {
 
     const db = getDb();
 
-    const collection =
-      db.collection("transactions");
-
     let { query } = req.body;
 
-    if (!query)
+    if(!query)
       return res.status(400).json({
 
         success:false,
@@ -253,158 +250,74 @@ app.post("/api/transactions/query/custom", async (req, res) => {
 
       });
 
+
     query = query.trim();
 
-    let filter:any = {};
 
-    let limit = 50;
+    // Mongo shell context
 
-    let sort:any = null;
+    const dbContext = {
 
-    let skip = 0;
+      transactions:
+        db.collection("transactions"),
 
+      users:
+        db.collection("users")
 
-    // =====================
-    // FIND FILTER
-    // =====================
-
-    const findMatch =
-      query.match(/find\s*\(([\s\S]*?)\)/);
-
-    if(findMatch){
-
-      let filterString =
-        findMatch[1].trim();
-
-      filter =
-        filterString
-          ? eval("("+filterString+")")   // allow mongo style object
-          : {};
-
-    }
-
-    else{
-
-      filter =
-        eval("("+query+")");
-
-    }
+    };
 
 
-    // =====================
-    // LIMIT
-    // =====================
+    // db.transactions → dbContext.transactions
 
-    const limitMatch =
-      query.match(/limit\s*\((\d+)\)/);
+    const executable =
+      query.replace(
 
-    if(limitMatch)
-      limit =
-        parseInt(limitMatch[1]);
+        /^db\./,
 
+        "dbContext."
 
-    // =====================
-    // SKIP
-    // =====================
-
-    const skipMatch =
-      query.match(/skip\s*\((\d+)\)/);
-
-    if(skipMatch)
-      skip =
-        parseInt(skipMatch[1]);
+      );
 
 
-    // =====================
-    // SORT
-    // =====================
+    // Execute exactly what user typed
 
-    const sortMatch =
-      query.match(/sort\s*\(([\s\S]*?)\)/);
+    const result =
+      await eval(
 
-    if(sortMatch){
+`(async()=>{
 
-      sort =
-        eval("("+sortMatch[1]+")");
+ const output =
+  await ${executable};
 
-    }
+ // Cursor handling
 
+ if(output &&
+    typeof output.toArray === "function"){
 
-    // =====================
-    // Execute
-    // =====================
+   return await output.toArray();
 
-    let cursor =
-      collection.find(filter);
+ }
 
-    if(sort){
+ return output;
 
-  const sortField =
-    Object.keys(sort)[0];
+})()`
 
-  const direction =
-    sort[sortField];
+      );
 
-  // numeric sort using aggregation
-
-  const results =
-    await collection.aggregate([
-
-      { $match: filter },
-
-      {
-        $addFields:{
-          numericAmount:{
-            $toDouble:"$amount"
-          }
-        }
-      },
-
-      {
-        $sort:{
-          [sortField === "amount"
-            ? "numericAmount"
-            : sortField
-          ]:direction
-        }
-      },
-
-      { $skip: skip },
-
-      { $limit: limit }
-
-    ]).toArray();
-
-  return res.json({
-
-    success:true,
-
-    data:results,
-
-    count:results.length
-
-  });
-
-}
-
-    if(skip)
-      cursor =
-        cursor.skip(skip);
-
-    cursor =
-      cursor.limit(limit);
-
-
-    const results =
-      await cursor.toArray();
 
     res.json({
 
       success:true,
 
-      data:results,
+      data:
+        Array.isArray(result)
+          ? result
+          : [result],
 
-      count:results.length
+      count:
+        Array.isArray(result)
+          ? result.length
+          : 1
 
     });
 

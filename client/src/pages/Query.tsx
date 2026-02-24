@@ -72,11 +72,8 @@ export default function Query() {
   };
 
   const sampleQueries = [
-    { label: "Find all transactions", query: "{}" },
-    { label: "Find transactions > $1000", query: '{"amount": {"$gt": 1000}}' },
-    { label: "Find deposits only", query: '{"type": "deposit"}' },
-    { label: "Sort by amount (descending)", query: '{}', sort: '{"amount": -1}' },
-    { label: "Limit to 5 results", query: '{}', limit: 5 },
+    { label: "Find all transactions", query: "db.transactions.find({})" },
+    { label: "Find deposits only", query: 'db.transactions.find({"type": "deposit"})' },
   ];
 
   return (
@@ -143,7 +140,7 @@ export default function Query() {
                 <Button
                   variant="outline"
                   className="w-full gap-2 h-auto p-3"
-                  onClick={() => setQuery("{}")}
+                  onClick={() => setQuery("db.transactions.find({})")}
                 >
                   <Filter className="w-4 h-4" />
                   <div className="text-left">
@@ -155,7 +152,7 @@ export default function Query() {
                 <Button
                   variant="outline"
                   className="w-full gap-2 h-auto p-3"
-                  onClick={() => setQuery('{"amount": {"$gt": 1000}}')}
+                  onClick={() => setQuery('db.transactions.find({"amount": {"$gt": 1000}})')}
                 >
                   <TrendingUp className="w-4 h-4" />
                   <div className="text-left">
@@ -167,7 +164,7 @@ export default function Query() {
                 <Button
                   variant="outline"
                   className="w-full gap-2 h-auto p-3"
-                  onClick={() => setQuery('{"type": "deposit"}')}
+                  onClick={() => setQuery('db.transactions.find({"type": "deposit"})')}
                 >
                   <ArrowDownLeft className="w-4 h-4" />
                   <div className="text-left">
@@ -179,7 +176,7 @@ export default function Query() {
                 <Button
                   variant="outline"
                   className="w-full gap-2 h-auto p-3"
-                  onClick={() => setQuery('{"type": "withdraw"}')}
+                  onClick={() => setQuery('db.transactions.find({"type": "withdraw"})')}
                 >
                   <ArrowUpRight className="w-4 h-4" />
                   <div className="text-left">

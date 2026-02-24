@@ -22,7 +22,7 @@ export interface Transaction {
   type: "deposit" | "withdraw" | "transfer";
   from_user?: string | null;
   to_user?: string | null;
-  amount: string; // Stored as string to maintain precision
+  amount: number; 
   description?: string;
   relatedUserId?: number;
   date: Date;
