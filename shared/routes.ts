@@ -35,8 +35,8 @@ const transactionSchema = z.object({
   type: z.enum(['deposit', 'withdraw', 'transfer_in', 'transfer_out']),
   amount: z.string(),
   description: z.string().optional(),
-  from_user: z.string().optional(),
-  to_user: z.string().optional(),
+  from_user: z.string().nullable().optional(),
+  to_user: z.string().nullable().optional(),
   relatedUserId: z.number().nullish(), // null for deposit/withdraw, number for transfers
   date: z.coerce.date(),
 });
