@@ -6,6 +6,9 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { initializeDb } from "./db";   // ⭐ IMPORTANT
+import { initNeo4jDriver, verifyNeo4jConnection, closeNeo4jDriver } from "../neo4j/db";
+import { setupNeo4jSchema } from "../neo4j/setup";
+import neo4jRoutes from "../neo4j/routes";
 
 const app = express();
 const httpServer = createServer(app);
@@ -66,8 +69,25 @@ app.use((req, res, next) => {
   // ⭐ START MONGODB FIRST
   await initializeDb();
 
+  // ⭐ INITIALIZE NEO4J (non-blocking — app still works if Neo4j is down)
+  try {
+    initNeo4jDriver();
+    const connected = await verifyNeo4jConnection();
+    if (connected) {
+      await setupNeo4jSchema();
+      log("Neo4j initialized successfully", "neo4j");
+    } else {
+      log("Neo4j not available — fraud detection features disabled", "neo4j");
+    }
+  } catch (error) {
+    log(`Neo4j init warning: ${error instanceof Error ? error.message : error}`, "neo4j");
+  }
+
   // THEN register API routes
   await registerRoutes(httpServer, app);
+
+  // Register Neo4j fraud detection routes
+  app.use("/api/neo4j", neo4jRoutes);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -99,4 +119,13 @@ app.use((req, res, next) => {
       log(`serving on port ${port}`);
     },
   );
+
+  // Graceful shutdown — close Neo4j driver
+  const shutdown = async () => {
+    log("Shutting down...");
+    await closeNeo4jDriver();
+    process.exit(0);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 })();
