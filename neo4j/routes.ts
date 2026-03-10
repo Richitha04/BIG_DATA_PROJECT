@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
+import { getSession } from "./db";
 import { syncAllToNeo4j } from "./sync";
 import {
     detectCycles,
@@ -195,6 +196,61 @@ router.get("/fraud/graph", async (_req: Request, res: Response) => {
             message:
                 error instanceof Error ? error.message : "Graph query failed",
         });
+    }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/neo4j/cql/execute — Execute raw Cypher queries
+// ─────────────────────────────────────────────
+router.post("/cql/execute", async (req: Request, res: Response) => {
+    // Only allow admins to run raw queries for security
+    if (!req.isAuthenticated() || !req.user || !(req.user as any).isAdmin) {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+    }
+
+    const { query } = req.body;
+    if (!query || typeof query !== 'string') {
+        return res.status(400).json({ success: false, message: "Query string is required" });
+    }
+
+    const session = getSession();
+    try {
+        const result = await session.run(query);
+        
+        // Format the Neo4j records into a simple array of objects for the frontend
+        const data = result.records.map((record: any) => {
+            const row: any = {};
+            record.keys.forEach((key: string) => {
+                const value = record.get(key);
+                // Handle Neo4j Node/Relationship objects and numbers
+                if (value && typeof value === 'object') {
+                    if (value.properties) {
+                        row[key] = value.properties; // Node or Relationship
+                    } else if (value.low !== undefined && value.high !== undefined) {
+                        row[key] = value.toNumber(); // Neo4j Integer
+                    } else {
+                        row[key] = value;
+                    }
+                } else {
+                    row[key] = value;
+                }
+            });
+            return row;
+        });
+
+        res.json({
+            success: true,
+            data: data,
+            count: data.length
+        });
+    } catch (error) {
+        console.error("[neo4j-route] CQL execution error:", error);
+        res.status(500).json({
+            success: false,
+            message: error instanceof Error ? error.message : "Query execution failed"
+        });
+    } finally {
+        await session.close();
     }
 });
 

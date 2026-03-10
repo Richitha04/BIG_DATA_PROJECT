@@ -16,6 +16,7 @@ import Transfer from "@/pages/Transfer";
 import History from "@/pages/History";
 import Admin from "@/pages/Admin";
 import Query from "@/pages/Query";
+import Neo4jQuery from "@/pages/Neo4jQuery";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ component: Component, adminOnly = false }: { component: any, adminOnly?: boolean }) {
@@ -83,6 +84,10 @@ function Router() {
 
       <Route path="/query">
         {() => <ProtectedRoute component={Query} />}
+      </Route>
+
+      <Route path="/neo4j-query">
+        {() => <ProtectedRoute component={Neo4jQuery} />}
       </Route>
 
       <Route path="/admin">
