@@ -36,12 +36,15 @@ export default function Neo4jQuery() {
   }, [searchParams]);
 
   const executeQuery = useMutation({
-    mutationFn: async (endpoint: string) => {
-      const response = await fetch(`/api/neo4j${endpoint}`, {
-        method: "GET",
+    mutationFn: async (queryString: string) => {
+      // TODO: Replace with actual Neo4j CQL execution endpoint
+      // This is a dummy API call for demonstration - friends can change later
+      const response = await fetch("/api/neo4j/cql/execute", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({ query: queryString }),
         credentials: "include",
       });
 
@@ -78,65 +81,126 @@ export default function Neo4jQuery() {
   };
 
   const cqlExamples = [
-    {
-      label: "Get All Nodes",
-      query: "MATCH (n) RETURN n",
-      description: "Retrieve all nodes in the graph"
-    },
+    // Basic Banking Queries
     {
       label: "Get All Users",
       query: "MATCH (u:User) RETURN u",
       description: "Retrieve all user nodes"
     },
     {
-      label: "Count All Nodes",
-      query: "MATCH (n) RETURN count(n) AS totalNodes",
-      description: "Count total number of nodes"
+      label: "Get All Transactions",
+      query: "MATCH (t:Transaction) RETURN t",
+      description: "Retrieve all transaction nodes"
     },
     {
-      label: "Find All Relationships",
-      query: "MATCH ()-[r]->() RETURN r",
-      description: "Retrieve all relationships"
+      label: "Count All Users",
+      query: "MATCH (u:User) RETURN count(u) AS totalUsers",
+      description: "Count total number of users"
     },
     {
-      label: "Get Transfer Relationships",
-      query: "MATCH ()-[t:TRANSFER]->() RETURN t",
+      label: "Count All Transactions",
+      query: "MATCH (t:Transaction) RETURN count(t) AS totalTransactions",
+      description: "Count total number of transactions"
+    },
+
+    // Transaction Type Queries
+    {
+      label: "Find All Deposits",
+      query: "MATCH (t:Transaction {type: 'deposit'}) RETURN t",
+      description: "Find all deposit transactions"
+    },
+    {
+      label: "Find All Withdrawals",
+      query: "MATCH (t:Transaction {type: 'withdraw'}) RETURN t",
+      description: "Find all withdrawal transactions"
+    },
+    {
+      label: "Find All Transfers",
+      query: "MATCH (t:Transaction {type: 'transfer'}) RETURN t",
+      description: "Find all transfer transactions"
+    },
+    {
+      label: "High Value Transactions",
+      query: "MATCH (t:Transaction) WHERE t.amount > 1000 RETURN t",
+      description: "Find transactions over $1000"
+    },
+
+    // Relationship Queries
+    {
+      label: "Get All Transfer Relationships",
+      query: "MATCH ()-[r:TRANSFER]->() RETURN r",
       description: "Retrieve all transfer relationships"
     },
     {
-      label: "Find User Connections",
-      query: "MATCH (a:User)-[r:TRANSFER]->(b:User) RETURN a, r, b",
+      label: "User Transfer Connections",
+      query: "MATCH (a:User)-[r:TRANSFER]->(b:User) RETURN a.fullName AS fromUser, b.fullName AS toUser, r.amount",
       description: "Find users connected by transfers"
     },
     {
-      label: "Count User Transactions",
-      query: "MATCH (u:User)-[r:TRANSFER]->() RETURN u.fullName, count(r) AS transactions",
-      description: "Count transactions per user"
+      label: "User's Outgoing Transfers",
+      query: "MATCH (u:User {fullName: 'John Doe'})-[r:TRANSFER]->(recipient:User) RETURN recipient.fullName, r.amount, r.date",
+      description: "Find transfers sent by specific user"
     },
     {
-      label: "Find High Value Transfers",
-      query: "MATCH ()-[t:TRANSFER]->() WHERE t.amount > 1000 RETURN t",
-      description: "Find transfers over $1000"
+      label: "User's Incoming Transfers",
+      query: "MATCH (u:User {fullName: 'John Doe'})<-[r:TRANSFER]-(sender:User) RETURN sender.fullName, r.amount, r.date",
+      description: "Find transfers received by specific user"
+    },
+
+    // Analytics Queries
+    {
+      label: "Count Transactions Per User",
+      query: "MATCH (u:User)-[r:TRANSFER]->() RETURN u.fullName, count(r) AS transactionCount",
+      description: "Count number of transfers per user"
     },
     {
-      label: "Simple Path Detection",
-      query: "MATCH p=(a:User)-[:TRANSFER*2..3]->(b:User) RETURN p LIMIT 10",
-      description: "Find paths of 2-3 transfers"
+      label: "Total Amount Transferred Per User",
+      query: "MATCH (u:User)-[r:TRANSFER]->() RETURN u.fullName, sum(r.amount) AS totalTransferred",
+      description: "Calculate total amount transferred by each user"
     },
     {
-      label: "Order by Amount",
-      query: "MATCH ()-[t:TRANSFER]->() RETURN t.amount ORDER BY t.amount DESC",
-      description: "Order transfers by amount (high to low)"
+      label: "Users With Most Transactions",
+      query: "MATCH (u:User)-[r:TRANSFER]->() RETURN u.fullName, count(r) AS transactionCount ORDER BY transactionCount DESC LIMIT 5",
+      description: "Find top 5 users with most transfers"
     },
     {
-      label: "Limit Results",
-      query: "MATCH (u:User) RETURN u LIMIT 5",
-      description: "Get only 5 users"
+      label: "Largest Transfer Amounts",
+      query: "MATCH ()-[r:TRANSFER]->() RETURN r.amount ORDER BY r.amount DESC LIMIT 10",
+      description: "Find top 10 largest transfer amounts"
+    },
+
+    // Date-based Queries
+    {
+      label: "Recent Transactions",
+      query: "MATCH (t:Transaction) WHERE t.date >= date('2024-01-01') RETURN t ORDER BY t.date DESC LIMIT 20",
+      description: "Get recent transactions from 2024"
     },
     {
-      label: "Skip and Limit",
-      query: "MATCH (u:User) RETURN u SKIP 2 LIMIT 3",
-      description: "Skip 2 users, get next 3"
+      label: "Transactions This Month",
+      query: "MATCH (t:Transaction) WHERE t.date >= date() - duration({days: 30}) RETURN t",
+      description: "Get transactions from last 30 days"
+    },
+    {
+      label: "Transactions by Date Range",
+      query: "MATCH (t:Transaction) WHERE t.date >= date('2024-01-01') AND t.date <= date('2024-12-31') RETURN t",
+      description: "Get transactions within date range"
+    },
+
+    // Advanced Banking Analytics
+    {
+      label: "Find Suspicious Circular Transfers",
+      query: "MATCH (u:User)-[r1:TRANSFER]->(middle:User)-[r2:TRANSFER]->(final:User) WHERE u <> final RETURN u.fullName, middle.fullName, final.fullName, r1.amount, r2.amount",
+      description: "Detect circular transfer patterns (potential fraud)"
+    },
+    {
+      label: "Users With High Frequency Transfers",
+      query: "MATCH (u:User)-[r:TRANSFER]->() WITH u, date(r.date) AS transferDate, count(r) AS dailyCount WHERE dailyCount > 3 RETURN u.fullName, transferDate, dailyCount",
+      description: "Find users with multiple transfers in same day"
+    },
+    {
+      label: "Round Number Transfers (Suspicious)",
+      query: "MATCH ()-[r:TRANSFER]->() WHERE r.amount % 1000 = 0 RETURN r ORDER BY r.amount DESC",
+      description: "Find transfers with round thousand amounts (potentially suspicious)"
     }
   ];
 
@@ -145,7 +209,7 @@ export default function Neo4jQuery() {
       <div>
         <h1 className="text-3xl font-bold font-display text-slate-900">Neo4j Query</h1>
         <p className="text-muted-foreground mt-1">
-          Execute Neo4j graph queries for fraud detection and network analysis.
+          Execute Neo4j CQL queries for graph database operations and fraud detection exercises.
         </p>
       </div>
 
