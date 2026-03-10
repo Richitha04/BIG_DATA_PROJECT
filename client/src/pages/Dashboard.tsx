@@ -3,7 +3,7 @@ import { useTransactions } from "@/hooks/use-banking";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ArrowDownLeft, ArrowUpRight, Send, Wallet, TrendingUp, Search, Filter } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Send, Wallet, TrendingUp, Search, Filter, Network } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
@@ -37,6 +37,11 @@ export default function Dashboard() {
           <Link href="/query">
             <Button variant="outline" className="gap-2">
               <Search className="w-4 h-4" /> Query
+            </Button>
+          </Link>
+          <Link href="/neo4j-query">
+            <Button variant="outline" className="gap-2">
+              <Network className="w-4 h-4" /> Neo4j
             </Button>
           </Link>
         </div>
