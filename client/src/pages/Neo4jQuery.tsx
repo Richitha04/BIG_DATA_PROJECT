@@ -81,128 +81,114 @@ export default function Neo4jQuery() {
   };
 
   const cqlExamples = [
-    // Basic Banking Queries
-    {
-      label: "Get All Users",
-      query: "MATCH (u:User) RETURN u",
-      description: "Retrieve all user nodes"
-    },
-    {
-      label: "Get All Transactions",
-      query: "MATCH (t:Transaction) RETURN t",
-      description: "Retrieve all transaction nodes"
-    },
-    {
-      label: "Count All Users",
-      query: "MATCH (u:User) RETURN count(u) AS totalUsers",
-      description: "Count total number of users"
-    },
-    {
-      label: "Count All Transactions",
-      query: "MATCH (t:Transaction) RETURN count(t) AS totalTransactions",
-      description: "Count total number of transactions"
-    },
 
-    // Transaction Type Queries
-    {
-      label: "Find All Deposits",
-      query: "MATCH (t:Transaction {type: 'deposit'}) RETURN t",
-      description: "Find all deposit transactions"
-    },
-    {
-      label: "Find All Withdrawals",
-      query: "MATCH (t:Transaction {type: 'withdraw'}) RETURN t",
-      description: "Find all withdrawal transactions"
-    },
-    {
-      label: "Find All Transfers",
-      query: "MATCH (t:Transaction {type: 'transfer'}) RETURN t",
-      description: "Find all transfer transactions"
-    },
-    {
-      label: "High Value Transactions",
-      query: "MATCH (t:Transaction) WHERE t.amount > 1000 RETURN t",
-      description: "Find transactions over $1000"
-    },
+  // Basic Retrieval
+  {
+    label: "Get All Users",
+    query: "MATCH (u:User) RETURN u",
+    description: "Retrieve all users"
+  },
+  {
+    label: "Get All Transactions",
+    query: "MATCH (t:Transaction) RETURN t",
+    description: "Retrieve all transactions"
+  },
 
-    // Relationship Queries
-    {
-      label: "Get All Transfer Relationships",
-      query: "MATCH ()-[r:TRANSFER]->() RETURN r",
-      description: "Retrieve all transfer relationships"
-    },
-    {
-      label: "User Transfer Connections",
-      query: "MATCH (a:User)-[r:TRANSFER]->(b:User) RETURN a.fullName AS fromUser, b.fullName AS toUser, r.amount",
-      description: "Find users connected by transfers"
-    },
-    {
-      label: "User's Outgoing Transfers",
-      query: "MATCH (u:User {fullName: 'John Doe'})-[r:TRANSFER]->(recipient:User) RETURN recipient.fullName, r.amount, r.date",
-      description: "Find transfers sent by specific user"
-    },
-    {
-      label: "User's Incoming Transfers",
-      query: "MATCH (u:User {fullName: 'John Doe'})<-[r:TRANSFER]-(sender:User) RETURN sender.fullName, r.amount, r.date",
-      description: "Find transfers received by specific user"
-    },
+  // Relationship Queries
+  {
+    label: "Users Sending Transfers",
+    query: "MATCH (u:User)-[:TRANSFER]->(r:User) RETURN u.fullName AS sender, r.fullName AS receiver",
+    description: "Show transfer connections between users"
+  },
+  {
+    label: "User Transfer Network",
+    query: "MATCH (a:User)-[r:TRANSFER]->(b:User) RETURN a,r,b",
+    description: "Visualize transfer graph between users"
+  },
 
-    // Analytics Queries
-    {
-      label: "Count Transactions Per User",
-      query: "MATCH (u:User)-[r:TRANSFER]->() RETURN u.fullName, count(r) AS transactionCount",
-      description: "Count number of transfers per user"
-    },
-    {
-      label: "Total Amount Transferred Per User",
-      query: "MATCH (u:User)-[r:TRANSFER]->() RETURN u.fullName, sum(r.amount) AS totalTransferred",
-      description: "Calculate total amount transferred by each user"
-    },
-    {
-      label: "Users With Most Transactions",
-      query: "MATCH (u:User)-[r:TRANSFER]->() RETURN u.fullName, count(r) AS transactionCount ORDER BY transactionCount DESC LIMIT 5",
-      description: "Find top 5 users with most transfers"
-    },
-    {
-      label: "Largest Transfer Amounts",
-      query: "MATCH ()-[r:TRANSFER]->() RETURN r.amount ORDER BY r.amount DESC LIMIT 10",
-      description: "Find top 10 largest transfer amounts"
-    },
+  // Filtering
+  {
+    label: "High Value Transfers",
+    query: "MATCH ()-[r:TRANSFER]->() WHERE r.amount > 1000 RETURN r",
+    description: "Find transfers above threshold"
+  },
 
-    // Date-based Queries
-    {
-      label: "Recent Transactions",
-      query: "MATCH (t:Transaction) WHERE t.date >= date('2024-01-01') RETURN t ORDER BY t.date DESC LIMIT 20",
-      description: "Get recent transactions from 2024"
-    },
-    {
-      label: "Transactions This Month",
-      query: "MATCH (t:Transaction) WHERE t.date >= date() - duration({days: 30}) RETURN t",
-      description: "Get transactions from last 30 days"
-    },
-    {
-      label: "Transactions by Date Range",
-      query: "MATCH (t:Transaction) WHERE t.date >= date('2024-01-01') AND t.date <= date('2024-12-31') RETURN t",
-      description: "Get transactions within date range"
-    },
+  // Aggregation
+  {
+    label: "Count Transfers Per User",
+    query: "MATCH (u:User)-[r:TRANSFER]->() RETURN u.fullName, COUNT(r) AS transferCount",
+    description: "Count number of transfers each user sent"
+  },
+  {
+    label: "Total Amount Sent Per User",
+    query: "MATCH (u:User)-[r:TRANSFER]->() RETURN u.fullName, SUM(r.amount) AS totalSent",
+    description: "Calculate total amount transferred per user"
+  },
 
-    // Advanced Banking Analytics
-    {
-      label: "Find Suspicious Circular Transfers",
-      query: "MATCH (u:User)-[r1:TRANSFER]->(middle:User)-[r2:TRANSFER]->(final:User) WHERE u <> final RETURN u.fullName, middle.fullName, final.fullName, r1.amount, r2.amount",
-      description: "Detect circular transfer patterns (potential fraud)"
-    },
-    {
-      label: "Users With High Frequency Transfers",
-      query: "MATCH (u:User)-[r:TRANSFER]->() WITH u, date(r.date) AS transferDate, count(r) AS dailyCount WHERE dailyCount > 3 RETURN u.fullName, transferDate, dailyCount",
-      description: "Find users with multiple transfers in same day"
-    },
-    {
-      label: "Round Number Transfers (Suspicious)",
-      query: "MATCH ()-[r:TRANSFER]->() WHERE r.amount % 1000 = 0 RETURN r ORDER BY r.amount DESC",
-      description: "Find transfers with round thousand amounts (potentially suspicious)"
-    }
-  ];
+  // Ordering
+  {
+    label: "Top Senders",
+    query: "MATCH (u:User)-[r:TRANSFER]->() RETURN u.fullName, COUNT(r) AS transferCount ORDER BY transferCount DESC LIMIT 5",
+    description: "Find users with most transfers"
+  },
+  {
+    label: "Largest Transfers",
+    query: "MATCH ()-[r:TRANSFER]->() RETURN r.amount ORDER BY r.amount DESC LIMIT 10",
+    description: "Find highest transfer amounts"
+  },
+
+  // Pagination
+  {
+    label: "List Users Alphabetically",
+    query: "MATCH (u:User) RETURN u.fullName ORDER BY u.fullName ASC",
+    description: "Sort users alphabetically"
+  },
+  {
+    label: "Skip First User",
+    query: "MATCH (u:User) RETURN u.fullName ORDER BY u.fullName SKIP 1 LIMIT 2",
+    description: "Pagination example"
+  },
+
+  // Update
+  {
+    label: "Update User Name",
+    query: "MATCH (u:User {fullName:'John Doe'}) SET u.fullName='John Doe Jr.'",
+    description: "Update user property"
+  },
+
+  // Delete
+  {
+    label: "Delete User",
+    query: "MATCH (u:User {fullName:'Jane Doe'}) DETACH DELETE u",
+    description: "Delete user and relationships"
+  },
+
+  {
+  label: "High Centrality Users (Most Connections)",
+  query: "MATCH (u:User)-[r:TRANSFER]-() RETURN u.fullName, COUNT(r) AS connectionCount ORDER BY connectionCount DESC LIMIT 5",
+  description: "Find users with the most transfer connections (high centrality)"
+},
+
+{
+  label: "High Cluster Participation",
+  query: "MATCH (u:User)-[:TRANSFER]->(v:User)<-[:TRANSFER]-(w:User) WITH u, COUNT(DISTINCT w) AS clusterSize WHERE clusterSize >= 3 RETURN u.fullName, clusterSize ORDER BY clusterSize DESC",
+  description: "Find users participating in highly clustered transfer groups"
+},
+
+
+  // Graph Pattern Analysis (Fraud-style)
+  {
+    label: "Circular Transfer Pattern",
+    query: "MATCH (u1:User)-[r1:TRANSFER]->(u2:User)-[r2:TRANSFER]->(u3:User)-[r3:TRANSFER]->(u1) RETURN u1.fullName, u2.fullName, u3.fullName",
+    description: "Detect circular money movement patterns"
+  },
+  {
+    label: "Users Sharing Same Recipient",
+    query: "MATCH (a:User)-[:TRANSFER]->(c:User)<-[:TRANSFER]-(b:User) WHERE a <> b RETURN a.fullName, b.fullName, c.fullName",
+    description: "Detect users sending money to the same account"
+  }
+
+];
 
   return (
     <div className="space-y-8">
